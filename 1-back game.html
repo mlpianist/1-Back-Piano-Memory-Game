@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Memory Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 3em;
+            font-weight: 300;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        .start-screen {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .instructions {
+            text-align: left;
+            margin: 30px 0;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #333;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255,215,0,0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,215,0,0.4);
+        }
+
+        .game-screen {
+            display: none;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .score, .round {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .feedback-light {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            border: 3px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .feedback-light.correct {
+            background: #4CAF50;
+            box-shadow: 0 0 20px #4CAF50;
+        }
+
+        .feedback-light.incorrect {
+            background: #F44336;
+            box-shadow: 0 0 20px #F44336;
+        }
+
+        .piano-container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            display: inline-block;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .piano {
+            position: relative;
+            display: flex;
+            height: 200px;
+            width: 588px; /* 14 white keys * 42px each */
+        }
+
+        .white-key {
+            width: 40px;
+            height: 200px;
+            background: white;
+            border: 2px solid #ccc;
+            margin-right: 2px;
+            border-radius: 0 0 8px 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .white-key:last-child {
+            margin-right: 0;
+        }
+
+        .black-key {
+            width: 28px;
+            height: 120px;
+            background: #333;
+            position: absolute;
+            border-radius: 0 0 6px 6px;
+            z-index: 2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            top: 0;
+        }
+
+        .key.highlighted {
+            background: #FF4444 !important;
+            box-shadow: 0 0 20px #FF4444;
+            transform: scale(1.05);
+        }
+
+        .black-key.highlighted {
+            background: #CC0000 !important;
+        }
+
+        /* Black key positions - centered on the dividing lines between white keys */
+        /* Each white key is 42px wide (40px + 2px margin), black key is 28px wide */
+        /* Position = (white_key_position * 42px) + 40px - (28px/2) = position + 26px */
+        /* C# between C(0) and D(1) */ .black-key[data-key="C#"] { left: 26px; }
+        /* D# between D(1) and E(2) */ .black-key[data-key="D#"] { left: 68px; }
+        /* F# between F(3) and G(4) */ .black-key[data-key="F#"] { left: 152px; }
+        /* G# between G(4) and A(5) */ .black-key[data-key="G#"] { left: 194px; }
+        /* A# between A(5) and B(6) */ .black-key[data-key="A#"] { left: 236px; }
+        /* C#2 between C2(7) and D2(8) */ .black-key[data-key="C#2"] { left: 320px; }
+        /* D#2 between D2(8) and E2(9) */ .black-key[data-key="D#2"] { left: 362px; }
+        /* F#2 between F2(10) and G2(11) */ .black-key[data-key="F#2"] { left: 446px; }
+        /* G#2 between G2(11) and A2(12) */ .black-key[data-key="G#2"] { left: 488px; }
+        /* A#2 between A2(12) and B2(13) */ .black-key[data-key="A#2"] { left: 530px; }
+
+        .instruction-text {
+            margin-top: 30px;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .results-screen {
+            display: none;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .final-score {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #FFD700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .performance-text {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+        }
+
+        .piano-container.hidden {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Start Screen -->
+        <div id="startScreen" class="start-screen">
+            <h1 class="title">Piano Memory Game</h1>
+            <p class="subtitle">Test your musical memory with this 1-back task</p>
+            
+            <div class="instructions">
+                <h3>How to Play:</h3>
+                <ul>
+                    <li>You'll see a piano keyboard with 2 keys highlighted in red</li>
+                    <li>Each keyboard is shown for 1 second, then disappears for 2 seconds</li>
+                    <li>If the current keyboard matches the previous one, press the <strong>SPACEBAR</strong></li>
+                    <li>If they don't match, just wait for the next keyboard</li>
+                    <li>Green light = correct, Red light = incorrect</li>
+                    <li>Complete 20 rounds to see your final score</li>
+                </ul>
+            </div>
+            
+            <button class="btn" onclick="startGame()">Start Game</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="game-screen">
+            <div class="game-info">
+                <div class="score">Score: <span id="scoreValue">0</span>%</div>
+                <div class="round">Round: <span id="roundValue">1</span>/20</div>
+            </div>
+
+            <div class="feedback-light" id="feedbackLight"></div>
+
+            <div class="piano-container" id="pianoContainer">
+                <div class="piano" id="piano">
+                    <!-- White keys (14 keys: C D E F G A B C D E F G A B) -->
+                    <div class="white-key key" data-key="C"></div>
+                    <div class="white-key key" data-key="D"></div>
+                    <div class="white-key key" data-key="E"></div>
+                    <div class="white-key key" data-key="F"></div>
+                    <div class="white-key key" data-key="G"></div>
+                    <div class="white-key key" data-key="A"></div>
+                    <div class="white-key key" data-key="B"></div>
+                    <div class="white-key key" data-key="C2"></div>
+                    <div class="white-key key" data-key="D2"></div>
+                    <div class="white-key key" data-key="E2"></div>
+                    <div class="white-key key" data-key="F2"></div>
+                    <div class="white-key key" data-key="G2"></div>
+                    <div class="white-key key" data-key="A2"></div>
+                    <div class="white-key key" data-key="B2"></div>
+                    
+                    <!-- Black keys (10 keys: C# D# F# G# A# for both octaves) -->
+                    <div class="black-key key" data-key="C#"></div>
+                    <div class="black-key key" data-key="D#"></div>
+                    <div class="black-key key" data-key="F#"></div>
+                    <div class="black-key key" data-key="G#"></div>
+                    <div class="black-key key" data-key="A#"></div>
+                    <div class="black-key key" data-key="C#2"></div>
+                    <div class="black-key key" data-key="D#2"></div>
+                    <div class="black-key key" data-key="F#2"></div>
+                    <div class="black-key key" data-key="G#2"></div>
+                    <div class="black-key key" data-key="A#2"></div>
+                </div>
+            </div>
+
+            <div class="instruction-text">
+                Press <strong>SPACEBAR</strong> if this keyboard matches the previous one
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="results-screen">
+            <h2 class="title">Game Complete!</h2>
+            <div class="final-score" id="finalScore">0%</div>
+            <div class="performance-text" id="performanceText">Great job!</div>
+            <button class="btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            currentRound: 1,
+            score: 0,
+            correctAnswers: 0,
+            totalRounds: 21,
+            currentPattern: [],
+            previousPattern: [],
+            awaitingResponse: false,
+            responseWindow: false,
+            spacebarPressed: false
+        };
+
+        const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C2', 'C#2', 'D2', 'D#2', 'E2', 'F2', 'F#2', 'G2', 'G#2', 'A2', 'A#2', 'B2'];
+
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            resetGame();
+            nextRound();
+        }
+
+        function resetGame() {
+            gameState = {
+                currentRound: 1,
+                score: 0,
+                correctAnswers: 0,
+                totalRounds: 21,
+                currentPattern: [],
+                previousPattern: [],
+                awaitingResponse: false,
+                responseWindow: false,
+                spacebarPressed: false
+            };
+            updateDisplay();
+        }
+
+        function generatePattern() {
+            // 25% chance to match previous pattern
+            if (gameState.previousPattern.length > 0 && Math.random() < 0.25) {
+                return [...gameState.previousPattern];
+            }
+            
+            // Generate new random pattern
+            const pattern = [];
+            const availableKeys = [...keys];
+            
+            for (let i = 0; i < 2; i++) {
+                const randomIndex = Math.floor(Math.random() * availableKeys.length);
+                pattern.push(availableKeys.splice(randomIndex, 1)[0]);
+            }
+            
+            return pattern;
+        }
+
+        function highlightKeys(pattern) {
+            // Clear previous highlights
+            clearHighlights();
+            
+            // Highlight new pattern
+            pattern.forEach(keyName => {
+                const keyElement = document.querySelector(`[data-key="${keyName}"]`);
+                if (keyElement) {
+                    keyElement.classList.add('highlighted');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.key').forEach(key => {
+                key.classList.remove('highlighted');
+            });
+        }
+
+        function patternsMatch(pattern1, pattern2) {
+            if (pattern1.length !== pattern2.length) return false;
+            const sorted1 = [...pattern1].sort();
+            const sorted2 = [...pattern2].sort();
+            return sorted1.every((key, index) => key === sorted2[index]);
+        }
+
+        function nextRound() {
+    // Generate new pattern
+    gameState.currentPattern = generatePattern();
+    const shouldMatch = patternsMatch(gameState.currentPattern, gameState.previousPattern);
+    gameState.awaitingResponse = shouldMatch;
+
+    // Show keyboard with highlighted keys
+    const pianoContainer = document.getElementById('pianoContainer');
+    pianoContainer.classList.remove('hidden');
+    highlightKeys(gameState.currentPattern);
+    gameState.responseWindow = true;
+
+    // Hide entire keyboard after 1 second
+    setTimeout(() => {
+        pianoContainer.classList.add('hidden');
+        clearHighlights();
+    }, 1000);
+
+    // End response window and process result after 3 seconds total
+    setTimeout(() => {
+        gameState.responseWindow = false;
+        
+        // If no spacebar was pressed, treat as correct non-response or incorrect non-response
+        if (!gameState.spacebarPressed) {
+            const correct = !shouldMatch; // Correct if we shouldn't have pressed spacebar
+            if (correct) {
+                gameState.correctAnswers++;
+            }
+        }
+        
+        // Update score
+        gameState.score = Math.round((gameState.correctAnswers / gameState.currentRound) * 100);
+        updateDisplay();
+        
+        // Check if this was the last round
+        if (gameState.currentRound >= gameState.totalRounds) {
+            endGame();
+            return;
+        }
+        
+        // Prepare for next round
+        gameState.previousPattern = [...gameState.currentPattern];
+        gameState.currentRound++;
+        gameState.spacebarPressed = false; // Reset for next round
+        
+        // Clear any feedback and continue
+        setTimeout(() => {
+            clearFeedback();
+            nextRound();
+        }, 500);
+    }, 3000);
+}
+
+        function processResponse(spacebarPressed) {
+            if (!gameState.responseWindow) return;
+            
+            gameState.spacebarPressed = true;
+            const shouldHavePressed = gameState.awaitingResponse;
+            const correct = spacebarPressed === shouldHavePressed;
+            
+            if (correct) {
+                gameState.correctAnswers++;
+            }
+            
+            // Show feedback light
+            showFeedback(correct);
+        }
+
+        function showFeedback(correct) {
+            const light = document.getElementById('feedbackLight');
+            light.classList.remove('correct', 'incorrect');
+            light.classList.add(correct ? 'correct' : 'incorrect');
+        }
+
+        function clearFeedback() {
+            const light = document.getElementById('feedbackLight');
+            light.classList.remove('correct', 'incorrect');
+        }
+
+        function updateDisplay() {
+            document.getElementById('scoreValue').textContent = gameState.score;
+            document.getElementById('roundValue').textContent = gameState.currentRound;
+        }
+
+        function endGame() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+            
+            const finalScore = Math.round((gameState.correctAnswers / gameState.totalRounds) * 100);
+            document.getElementById('finalScore').textContent = finalScore + '%';
+            
+            let performanceText = '';
+            if (finalScore >= 90) performanceText = 'Outstanding! Excellent musical memory!';
+            else if (finalScore >= 80) performanceText = 'Excellent work! Great musical memory!';
+            else if (finalScore >= 70) performanceText = 'Good job! Keep practicing!';
+            else if (finalScore >= 60) performanceText = 'Not bad! Room for improvement!';
+            else performanceText = 'Keep practicing to improve your memory!';
+            
+            document.getElementById('performanceText').textContent = performanceText;
+        }
+
+        function restartGame() {
+            document.getElementById('resultsScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'block';
+        }
+
+        // Keyboard event listener
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                if (gameState.responseWindow) {
+                    processResponse(true);
+                }
+            }
+        });
+
+        // Prevent spacebar from scrolling the page
+        window.addEventListener('keydown', function(e) {
+            if(e.keyCode === 32 && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
